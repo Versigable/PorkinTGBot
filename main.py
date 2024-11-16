@@ -3,8 +3,9 @@ from telegram.ext import Updater, InlineQueryHandler, CommandHandler
 import requests
 from io import BytesIO
 from PIL import Image
+import os
 
-TOKEN = 'YOUR_API_TOKEN_HERE'
+TOKEN = os.getenv('PORKIN_BOT_TOKEN')
 
 # Assuming your character image is in 'character.png' file
 CHARACTER_PATH = 'character.png'
