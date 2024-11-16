@@ -1,4 +1,4 @@
 python-telegram-bot==13.7
 Pillow==9.0.1
 requests==2.27.1
-gunicorn
+gunicorn==20.1.0
