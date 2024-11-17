@@ -58,7 +58,7 @@ def main():
     # Handler for the /porkin command
     dp.add_handler(CommandHandler("porkin", porkin_command))
     
-    updater.start_polling(interval=1.0, timeout=30)
+    updater.start_polling(poll_interval=1.0, timeout=30)
     updater.idle()
 
 if __name__ == '__main__':
