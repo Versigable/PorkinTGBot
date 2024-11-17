@@ -1,73 +1,64 @@
-from telegram import InlineQueryResultPhoto, InputTextMessageContent, Bot
-from telegram.ext import Updater, InlineQueryHandler, CommandHandler
-import requests
-from io import BytesIO
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from PIL import Image
+from io import BytesIO
 import os
-import logging
-import base64
-import uuid
-
-# Configure logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 TOKEN = os.getenv('PORKIN_BOT_TOKEN')
+STOCK_IMAGE_PATH = 'path/to/your/stock_image.png'  # Ensure this path is correct
+last_photo = {}
 
-# Assuming your character image is in 'character.png' file
-CHARACTER_PATH = 'character.png'
+def overlay_image(user_image, stock_image_path):
+    """Overlay user image with stock image."""
+    user_img = Image.open(user_image)
+    stock_img = Image.open(stock_image_path)
+    
+    # Resize stock image if needed to fit on top of the user image
+    stock_img = stock_img.resize(user_img.size)
+    
+    # Overlay logic (simple paste here)
+    user_img.paste(stock_img, (0,0), stock_img)
+    
+    # Save the result to a BytesIO object for sending
+    result = BytesIO()
+    user_img.save(result, format="PNG")
+    result.seek(0)
+    return result
 
-# Function to overlay the character
-def overlay_image(base64_image):
-    # Load the character image
-    character = Image.open(CHARACTER_PATH)
-    # Decode the base64 image to a PIL Image object
-    base_image = Image.open(BytesIO(base64.b64decode(base64_image.split(',')[1])))
-    # Perform overlay logic here
-    # For simplicity, let's just paste the character in the top-left corner
-    base_image.paste(character, (0,0), character)
-    # Convert back to base64
-    buffered = BytesIO()
-    base_image.save(buffered, format="PNG")
-    return buffered.getvalue()
+def handle_photo(update, context):
+    """Store the last photo sent in the chat."""
+    chat_id = update.message.chat_id
+    last_photo[chat_id] = update.message.photo[-1].file_id
 
-def inlinequery(update, context):
-    query = update.inline_query.query
-    if not query:
-        return
-
-    # Process the image from the user's query
-    try:
-        processed_image_data = overlay_image(query)
-        
-        results = [
-            InlineQueryResultPhoto(
-                id=str(uuid.uuid4()),
-                photo_url="data:image/png;base64," + base64.b64encode(processed_image_data).decode('utf-8'),
-                thumb_url="data:image/png;base64," + base64.b64encode(processed_image_data)[:400].decode('utf-8')  # Thumbnail
-            )
-        ]
-        update.inline_query.answer(results)
-    except Exception as e:
-        logger.error(f"Error in inline query handler: {e}")
+def porkin_command(update, context):
+    """Handle the /porkin command to overlay images."""
+    chat_id = update.message.chat_id
+    
+    if chat_id in last_photo:
+        file_id = last_photo[chat_id]
+        new_file = context.bot.get_file(file_id)
+        with BytesIO() as user_image:
+            new_file.download(out=user_image)
+            user_image.seek(0)
+            
+            # Process image
+            processed_image = overlay_image(user_image, STOCK_IMAGE_PATH)
+            
+            # Send the processed image back
+            context.bot.send_photo(chat_id=chat_id, photo=processed_image)
+    else:
+        update.message.reply_text("Please upload an image before using /porkin.")
 
 def main():
-    # Clear any existing webhook
-    bot = Bot(token=TOKEN)
-    webhook_info = bot.get_webhook_info()
-    if webhook_info.url:
-        logger.info("Clearing existing webhook")
-        bot.delete_webhook()
-    else:
-        logger.info("No webhook to clear")
-
     updater = Updater(TOKEN, use_context=True)
     dp = updater.dispatcher
-    dp.add_handler(InlineQueryHandler(inlinequery))
-
-    # Start the bot
-    logger.info("Starting bot polling")
-    updater.start_polling()
+    
+    # Handler for photos
+    dp.add_handler(MessageHandler(Filters.photo, handle_photo))
+    
+    # Handler for the /porkin command
+    dp.add_handler(CommandHandler("porkin", porkin_command))
+    
+    updater.start_polling(interval=1.0, timeout=30)
     updater.idle()
 
 if __name__ == '__main__':
