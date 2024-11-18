@@ -4,7 +4,7 @@ from io import BytesIO
 import os
 
 TOKEN = os.getenv('PORKIN_BOT_TOKEN')
-STOCK_IMAGE_PATH = '/root/PorkinTGBot/porkin_images/porkin1.png'  # Ensure this path is correct
+STOCK_IMAGE_PATH = '/root/PorkinTGBot/porkin_images/porkin1.jpg'  # Ensure this path is correct
 last_photo = {}
 
 def overlay_image(user_image, stock_image_path):
