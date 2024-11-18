@@ -7,6 +7,8 @@ TOKEN = os.getenv('PORKIN_BOT_TOKEN')
 STOCK_IMAGE_PATH = '/opt/render/project/src/porkin/porkin1.png'  # Ensure this path is correct
 last_photo = {}
 
+print(os.getcwd())
+
 def overlay_image(user_image, stock_image_path):
     """Overlay user image with stock image."""
     user_img = Image.open(user_image)
